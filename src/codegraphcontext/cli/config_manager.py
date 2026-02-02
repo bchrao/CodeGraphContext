@@ -38,7 +38,7 @@ DEFAULT_CONFIG = {
     "PARALLEL_WORKERS": "4",
     "CACHE_ENABLED": "true",
     "IGNORE_DIRS": "node_modules,venv,.venv,env,.env,dist,build,target,out,.git,.idea,.vscode,__pycache__",
-    "INDEX_SOURCE": "false",
+    "INDEX_SOURCE": "true",
 }
 
 # Configuration key descriptions
