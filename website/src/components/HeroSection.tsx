@@ -8,6 +8,8 @@ import ShowStarGraph from "@/components/ShowStarGraph";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 
+const OUTLINE_BUTTON_CLASSES = "border-gray-300 hover:border-primary/60 bg-white/80 backdrop-blur-sm shadow-sm transition-smooth text-gray-900 dark:bg-transparent dark:text-foreground dark:border-primary/30 w-full sm:w-auto";
+
 const HeroSection = () => {
   const [stars, setStars] = useState(null);
   const [forks, setForks] = useState(null);
@@ -111,17 +113,17 @@ const HeroSection = () => {
               pip install codegraphcontext
             </Button>
 
-            <Button variant="outline" size="lg" asChild className="border-gray-300 hover:border-primary/60 bg-white/80 backdrop-blur-sm shadow-sm transition-smooth text-gray-900 dark:bg-transparent dark:text-foreground dark:border-primary/30 w-full sm:w-auto">
+            <Button variant="outline" size="lg" asChild className={OUTLINE_BUTTON_CLASSES}>
               <a href="https://github.com/CodeGraphContext/CodeGraphContext" target="_blank" rel="noopener noreferrer">
                 <Github className="mr-2 h-5 w-5" />
                 View on GitHub
                 <ExternalLink className="ml-2 h-4 w-4" />
               </a>
             </Button>
-            <Button variant="outline" size="lg" asChild className="border-gray-300 hover:border-primary/60 bg-white/80 backdrop-blur-sm shadow-sm transition-smooth text-gray-900 dark:bg-transparent dark:text-foreground dark:border-primary/30 w-full sm:w-auto">
+            <Button variant="outline" size="lg" asChild className={OUTLINE_BUTTON_CLASSES}>
               <a href="https://codegraphcontext.github.io/CodeGraphContext/" target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-5 w-5" />
                 Documentation
+                <ExternalLink className="ml-2 h-4 w-4" />
               </a>
             </Button>
           </div>
