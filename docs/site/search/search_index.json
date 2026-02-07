@@ -683,7 +683,7 @@
         {
             "location": "roadmap/#currently-supported-stable",
             "title": "\ud83d\udfe2 Currently Supported (Stable)",
-            "text": "<p>These features are live and battle-tested in version <code>0.2.0+</code>.</p> <ul> <li>Core Indexing: Python, JavaScript, TypeScript, Go, Java, C++, Ruby, PHP.</li> <li>Database Backends:<ul> <li>FalkorDB Lite (In-memory, default for Unix).</li> <li>Neo4j (Docker/Native, default for Production).</li> </ul> </li> <li>MCP Server: Full support for Cursor, Claude Desktop, Windsurf, VS Code.</li> <li>Live Watching: Real-time updates via <code>cgc watch</code>.</li> <li>Bundles: Export/Import indexed graphs.</li> </ul>"
+            "text": "<p>These features are live and battle-tested in version <code>0.2.1+</code>.</p> <ul> <li>Core Indexing: Python, JavaScript, TypeScript, Go, Java, C++, Ruby, PHP.</li> <li>Database Backends:<ul> <li>FalkorDB Lite (In-memory, default for Unix).</li> <li>Neo4j (Docker/Native, default for Production).</li> </ul> </li> <li>MCP Server: Full support for Cursor, Claude Desktop, Windsurf, VS Code.</li> <li>Live Watching: Real-time updates via <code>cgc watch</code>.</li> <li>Bundles: Export/Import indexed graphs.</li> </ul>"
         },
         {
             "location": "roadmap/#in-progress-beta-active-dev",

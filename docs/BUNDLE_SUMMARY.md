@@ -256,7 +256,7 @@ Shortcuts:
 
 ## 🗺️ Future Roadmap
 
-### Phase 2: Bundle Registry (v0.2.0)
+### Phase 2: Bundle Registry (v0.2.1)
 - [ ] Central bundle registry (like npm)
 - [ ] `cgc registry search` command
 - [ ] Automatic download from registry
