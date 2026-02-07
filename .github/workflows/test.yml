@@ -11,23 +11,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Redis (ARM optimized)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lsb-release curl gpg
-          curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
-          sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
-          sudo apt-get update
-          sudo apt-get install -y redis-server
-          sudo systemctl enable redis-server
-          sudo systemctl start redis-server
 
       - name: Set up Python
         uses: actions/setup-python@v5
