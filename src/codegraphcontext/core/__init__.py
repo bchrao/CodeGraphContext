@@ -2,9 +2,10 @@
 """
 Core database management module.
 
-Supports both Neo4j and FalkorDB Lite backends.
+Supports Neo4j, FalkorDB Lite, and remote FalkorDB backends.
 Use DATABASE_TYPE environment variable to switch:
 - DATABASE_TYPE=falkordb - Uses embedded FalkorDB Lite (recommended for lite-version)
+- DATABASE_TYPE=falkordb-remote - Uses a remote/hosted FalkorDB server over TCP
 - DATABASE_TYPE=neo4j - Uses Neo4j server
 - If not set, auto-detects based on what's available
 """
@@ -24,6 +25,10 @@ def _is_falkordb_available() -> bool:
     except ImportError:
         return False
 
+def _is_falkordb_remote_configured() -> bool:
+    """Check if a remote FalkorDB host is configured."""
+    return bool(os.getenv('FALKORDB_HOST'))
+
 def _is_neo4j_configured() -> bool:
     """Check if Neo4j is configured with credentials."""
     return all([
@@ -32,16 +37,17 @@ def _is_neo4j_configured() -> bool:
         os.getenv('NEO4J_PASSWORD')
     ])
 
-def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager']:
+def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager', 'FalkorDBRemoteManager']:
     """
     Factory function to get the appropriate database manager based on configuration.
-    
+
     Selection logic:
     1. Runtime Override: 'CGC_RUNTIME_DB_TYPE' (set via --database flag)
     2. Configured Default: 'DEFAULT_DATABASE' (set via 'cgc default database')
     3. Legacy Env Var: 'DATABASE_TYPE'
-    4. Implicit Default: FalkorDB (if available)
-    5. Fallback: Neo4j (if configured)
+    4. Auto-detect: Remote FalkorDB (if FALKORDB_HOST is set)
+    5. Implicit Default: FalkorDB Lite (if available)
+    6. Fallback: Neo4j (if configured)
     """
     from codegraphcontext.utils.debug_log import info_logger
     
@@ -61,6 +67,16 @@ def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager']:
             info_logger("Using FalkorDB Lite (explicit)")
             return FalkorDBManager()
             
+        elif db_type == 'falkordb-remote':
+            if not _is_falkordb_remote_configured():
+                raise ValueError(
+                    "Database set to 'falkordb-remote' but FALKORDB_HOST is not set.\n"
+                    "Set the FALKORDB_HOST environment variable to your remote FalkorDB host."
+                )
+            from .database_falkordb_remote import FalkorDBRemoteManager
+            info_logger("Using remote FalkorDB (explicit)")
+            return FalkorDBRemoteManager()
+
         elif db_type == 'neo4j':
             if not _is_neo4j_configured():
                  raise ValueError("Database set to 'neo4j' but it is not configured.\nRun 'cgc neo4j setup' to configure Neo4j.")
@@ -68,15 +84,21 @@ def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager']:
             info_logger("Using Neo4j Server (explicit)")
             return DatabaseManager()
         else:
-            raise ValueError(f"Unknown database type: '{db_type}'. Use 'falkordb' or 'neo4j'.")
+            raise ValueError(f"Unknown database type: '{db_type}'. Use 'falkordb', 'falkordb-remote', or 'neo4j'.")
 
-    # 4. Implicit Default -> FalkorDB (Zero Config)
+    # 4. Auto-detect: Remote FalkorDB (if FALKORDB_HOST is set)
+    if _is_falkordb_remote_configured():
+        from .database_falkordb_remote import FalkorDBRemoteManager
+        info_logger("Using remote FalkorDB (auto-detected via FALKORDB_HOST)")
+        return FalkorDBRemoteManager()
+
+    # 5. Implicit Default -> FalkorDB Lite (Zero Config)
     if _is_falkordb_available():
         from .database_falkordb import FalkorDBManager
         info_logger("Using FalkorDB Lite (default)")
         return FalkorDBManager()
         
-    # 5. Fallback if FalkorDB missing but Neo4j is ready
+    # 6. Fallback if FalkorDB missing but Neo4j is ready
     if _is_neo4j_configured():
         from .database import DatabaseManager
         info_logger("Using Neo4j Server (auto-detected)")
@@ -103,5 +125,6 @@ def get_database_manager() -> Union['DatabaseManager', 'FalkorDBManager']:
 # For backward compatibility, export DatabaseManager
 from .database import DatabaseManager
 from .database_falkordb import FalkorDBManager
+from .database_falkordb_remote import FalkorDBRemoteManager
 
-__all__ = ['DatabaseManager', 'FalkorDBManager', 'get_database_manager']
+__all__ = ['DatabaseManager', 'FalkorDBManager', 'FalkorDBRemoteManager', 'get_database_manager']

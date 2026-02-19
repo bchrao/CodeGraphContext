@@ -14,6 +14,14 @@ services:
       - cgc-data:/root/.codegraphcontext
     environment:
       - PYTHONUNBUFFERED=1
+      # Uncomment and set these to use a remote FalkorDB instance:
+      # - DATABASE_TYPE=falkordb-remote
+      # - FALKORDB_HOST=your-falkordb-host.example.com
+      # - FALKORDB_PORT=6379
+      # - FALKORDB_PASSWORD=your_password
+      # - FALKORDB_USERNAME=default
+      # - FALKORDB_SSL=true
+      # - FALKORDB_GRAPH_NAME=codegraph
     stdin_open: true
     tty: true
     command: bash
