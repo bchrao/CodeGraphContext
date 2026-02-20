@@ -22,6 +22,8 @@ services:
       # - FALKORDB_USERNAME=default
       # - FALKORDB_SSL=true
       # - FALKORDB_GRAPH_NAME=codegraph
+      # Uncomment to enable authenticated git clone for private repos:
+      # - GIT_TOKEN=your_personal_access_token
     stdin_open: true
     tty: true
     command: bash
