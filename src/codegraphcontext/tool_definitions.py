@@ -1,5 +1,18 @@
 
 TOOLS = {
+    "index_repository": {
+        "name": "index_repository",
+        "description": "Clone a git repository by HTTPS URL into the server and index it into the code graph. Supports private repositories when a GIT_TOKEN environment variable is configured. Returns a job ID for background processing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "url": {"type": "string", "description": "HTTPS git URL of the repository to clone and index (e.g., https://github.com/org/repo.git)."},
+                "branch": {"type": "string", "description": "Branch to clone.", "default": "main"},
+                "is_dependency": {"type": "boolean", "description": "Whether this repository is a dependency.", "default": False}
+            },
+            "required": ["url"]
+        }
+    },
     "add_code_to_graph": {
         "name": "add_code_to_graph",
         "description": "Performs a one-time scan of a local folder to add its code to the graph. Ideal for indexing libraries, dependencies, or projects not being actively modified. Returns a job ID for background processing.",
