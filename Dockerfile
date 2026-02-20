@@ -60,6 +60,9 @@ ENV CGC_HOME=/root/.codegraphcontext
 # ENV FALKORDB_SSL=false
 # ENV FALKORDB_GRAPH_NAME=codegraph
 
+# Git token for authenticated clone of private repos (used by index_repository tool)
+# ENV GIT_TOKEN=
+
 # Expose port for potential web interface (future use)
 EXPOSE 8080
 
