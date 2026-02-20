@@ -137,11 +137,20 @@ class MCPServer:
     def unwatch_directory_tool(self, **args) -> Dict[str, Any]:
         return watcher_handlers.unwatch_directory(self.code_watcher, **args)
 
+    def index_repository_tool(self, **args) -> Dict[str, Any]:
+        return indexing_handlers.index_repository(
+            self.graph_builder,
+            self.job_manager,
+            self.loop,
+            self.list_indexed_repositories_tool,
+            **args
+        )
+
     def add_code_to_graph_tool(self, **args) -> Dict[str, Any]:
         return indexing_handlers.add_code_to_graph(
-            self.graph_builder, 
-            self.job_manager, 
-            self.loop, 
+            self.graph_builder,
+            self.job_manager,
+            self.loop,
             self.list_indexed_repositories_tool, # Pass the wrapper or bound method so it executes correctly
             **args
         )
@@ -179,6 +188,7 @@ class MCPServer:
         Routes a tool call from the AI assistant to the appropriate handler function. 
         """
         tool_map: Dict[str, Coroutine] = {
+            "index_repository": self.index_repository_tool,
             "add_package_to_graph": self.add_package_to_graph_tool,
             "find_dead_code": self.find_dead_code_tool,
             "find_code": self.find_code_tool,
