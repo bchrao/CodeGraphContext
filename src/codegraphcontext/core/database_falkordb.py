@@ -15,6 +15,21 @@ from typing import Optional, Tuple
 
 from codegraphcontext.utils.debug_log import debug_log, info_logger, error_logger, warning_logger
 
+# ---------------------------------------------------------------------------
+# Compatibility patch: redis-py >= 5.x added OpenTelemetry error telemetry that
+# accesses conn.port inside its error handler. UnixDomainSocketConnection never
+# had a 'port' attribute, so any exception raised during a Unix-socket connection
+# (e.g. the sentinel-detection INFO call inside FalkorDB.__init__) would produce
+# a secondary AttributeError masking the real problem.
+# Patching the class at import time costs nothing and fixes all call-sites.
+# ---------------------------------------------------------------------------
+try:
+    from redis.connection import UnixDomainSocketConnection as _UDSC
+    if not hasattr(_UDSC, 'port'):
+        _UDSC.port = 0  # type: ignore[attr-defined]
+except Exception:
+    pass  # redis not installed or class structure changed — safe to ignore
+
 class FalkorDBManager:
     """
     Manages the FalkorDB Lite database connection as a singleton.

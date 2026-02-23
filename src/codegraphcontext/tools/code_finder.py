@@ -19,15 +19,17 @@ class CodeFinder:
     def format_query(self, find_by: Literal["Class", "Function"], fuzzy_search:bool) -> str:
         """Format the search query based on the search type and fuzzy search settings."""
         if self._is_falkordb:
+            # FalkorDB does not support CALL db.idx.fulltext.queryNodes.
+            # Fall back to a pure Cypher CONTAINS/toLower match on node name.
+            name_filter = "toLower(node.name) CONTAINS toLower($search_term)"
             return f"""
-                CALL db.idx.fulltext.queryNodes('{find_by}', $search_term) YIELD node, score
-                    WITH node, score
-                    WHERE node:{find_by} {'AND node.name CONTAINS $search_term' if not fuzzy_search else ''}
-                    RETURN node.name as name, node.path as path, node.line_number as line_number,
-                        node.source as source, node.docstring as docstring, node.is_dependency as is_dependency
-                    ORDER BY score DESC
-                    LIMIT 20
-                """
+                MATCH (node:{find_by})
+                WHERE {name_filter}
+                RETURN node.name as name, node.path as path, node.line_number as line_number,
+                    node.source as source, node.docstring as docstring, node.is_dependency as is_dependency
+                ORDER BY node.is_dependency ASC, node.name
+                LIMIT 20
+            """
         return f"""
             CALL db.index.fulltext.queryNodes("code_search_index", $search_term) YIELD node, score
                 WITH node, score
@@ -51,8 +53,10 @@ class CodeFinder:
                 """, name=search_term)
                 return result.data()
             
-            # Fuzzy search using fulltext index
-            formatted_search_term = f"name:{search_term}"
+            # Fuzzy search using fulltext index (Neo4j) or CONTAINS fallback (FalkorDB)
+            # On FalkorDB, format_query uses CONTAINS so we pass the raw term; on Neo4j
+            # we need the Lucene field-selector prefix.
+            formatted_search_term = search_term if self._is_falkordb else f"name:{search_term}"
             result = session.run(self.format_query("Function", fuzzy_search), search_term=formatted_search_term)
             return result.data()
 
@@ -69,8 +73,10 @@ class CodeFinder:
                 """, name=search_term)
                 return result.data()
 
-            # Fuzzy search using fulltext index
-            formatted_search_term = f"name:{search_term}"
+            # Fuzzy search using fulltext index (Neo4j) or CONTAINS fallback (FalkorDB)
+            # On FalkorDB, format_query uses CONTAINS so we pass the raw term; on Neo4j
+            # we need the Lucene field-selector prefix.
+            formatted_search_term = search_term if self._is_falkordb else f"name:{search_term}"
             result = session.run(self.format_query("Class", fuzzy_search), search_term=formatted_search_term)
             return result.data()
 
@@ -113,29 +119,30 @@ class CodeFinder:
             return result.data()
 
     def _find_by_content_falkordb(self, search_term: str) -> List[Dict]:
-        """FalkorDB-compatible content search. Queries each label separately since
-        FalkorDB fulltext API takes a label name instead of an index name."""
+        """FalkorDB-compatible content search using pure Cypher CONTAINS matching.
+        FalkorDB does not support CALL db.idx.fulltext.queryNodes, so we fall back
+        to substring matching on name, source, and docstring fields."""
         all_results = []
         with self.driver.session() as session:
             for label, type_name in [('Function', 'function'), ('Class', 'class')]:
                 try:
                     result = session.run(f"""
-                        CALL db.idx.fulltext.queryNodes('{label}', $search_term) YIELD node, score
-                        WITH node, score
+                        MATCH (node:{label})
+                        WHERE toLower(node.name) CONTAINS toLower($search_term)
+                            OR (node.source IS NOT NULL AND toLower(node.source) CONTAINS toLower($search_term))
+                            OR (node.docstring IS NOT NULL AND toLower(node.docstring) CONTAINS toLower($search_term))
                         RETURN
                             '{type_name}' as type,
                             node.name as name, node.path as path,
                             node.line_number as line_number, node.source as source,
-                            node.docstring as docstring, node.is_dependency as is_dependency,
-                            score
-                        ORDER BY score DESC
+                            node.docstring as docstring, node.is_dependency as is_dependency
+                        ORDER BY node.is_dependency ASC, node.name
                         LIMIT 20
                     """, search_term=search_term)
                     all_results.extend(result.data())
                 except Exception:
-                    logger.debug(f"FalkorDB fulltext query failed for label {label}", exc_info=True)
-            all_results.sort(key=lambda x: x.get('score', 0), reverse=True)
-            return all_results[:20]
+                    logger.debug(f"FalkorDB content query failed for label {label}", exc_info=True)
+        return all_results[:20]
     
     def find_by_module_name(self, search_term: str) -> List[Dict]:
         """Find modules by name matching"""
@@ -168,6 +175,12 @@ class CodeFinder:
 
     def find_related_code(self, user_query: str, fuzzy_search: bool, edit_distance: int) -> Dict[str, Any]:
         """Find code related to a query using multiple search strategies"""
+        # FalkorDB does not support Lucene-style fuzzy edit-distance syntax (e.g. term~2).
+        # On FalkorDB, always use the plain query so that the CONTAINS-based fallbacks work.
+        if fuzzy_search and self._is_falkordb:
+            logger.debug("FalkorDB backend: ignoring fuzzy edit-distance normalisation; using plain CONTAINS search.")
+            fuzzy_search = False
+
         if fuzzy_search:
             user_query_normalized = " ".join(map(lambda x: f"{x}~{edit_distance}", user_query.split(" ")))
         else:
