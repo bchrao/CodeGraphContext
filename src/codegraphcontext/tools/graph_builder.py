@@ -1,6 +1,7 @@
 
 # src/codegraphcontext/tools/graph_builder.py
 import asyncio
+import json
 import pathspec
 from pathlib import Path
 from typing import Any, Coroutine, Dict, Optional, Tuple
@@ -14,6 +15,26 @@ from ..utils.debug_log import debug_log, info_logger, error_logger, warning_logg
 from tree_sitter import Language, Parser
 from ..utils.tree_sitter_manager import get_tree_sitter_manager
 from ..cli.config_manager import get_config_value
+
+
+def _sanitize_props(item: dict) -> dict:
+    """Sanitize a dict so all values are FalkorDB-safe primitives.
+
+    FalkorDB only accepts primitive types (str, int, float, bool, None)
+    or flat arrays of primitives as node property values.  Tuples, dicts,
+    and lists-of-dicts are serialized to JSON strings.
+    """
+    clean = {}
+    for k, v in item.items():
+        if isinstance(v, tuple):
+            # e.g. context tuple from call parsers -> JSON string
+            clean[k] = json.dumps(v)
+        elif isinstance(v, list) and v and isinstance(v[0], dict):
+            # e.g. detailed_args list-of-dicts -> JSON string
+            clean[k] = json.dumps(v)
+        else:
+            clean[k] = v
+    return clean
 
 
 class TreeSitterParser:
@@ -353,7 +374,7 @@ class GraphBuilder:
                         MERGE (f)-[:CONTAINS]->(n)
                     """
 
-                    session.run(query, path=file_path_str, name=item['name'], line_number=item['line_number'], props=item)
+                    session.run(query, path=file_path_str, name=item['name'], line_number=item['line_number'], props=_sanitize_props(item))
                     
                     if label == 'Function':
                         for arg_name in item.get('args', []):

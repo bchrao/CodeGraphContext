@@ -31,6 +31,38 @@ from .tools.handlers import (
 DEFAULT_EDIT_DISTANCE = 2
 DEFAULT_FUZZY_SEARCH = False
 
+WORKSPACE_PREFIX = "/workspace/"
+
+
+def _is_path_key(key: str) -> bool:
+    """Check if a dict key represents a file path field.
+
+    Matches keys like 'path', 'clone_path', 'caller_file_path', and also
+    Cypher-aliased keys like 'f.path', 'n.caller_file_path'.
+    """
+    # Strip Cypher alias prefix (e.g. "f.path" -> "path")
+    bare = key.rsplit(".", 1)[-1] if "." in key else key
+    return bare == "path" or bare.endswith("_path")
+
+
+def _strip_path_value(value):
+    """Strip /workspace/ prefix from a single string value."""
+    if isinstance(value, str) and value.startswith(WORKSPACE_PREFIX):
+        return value[len(WORKSPACE_PREFIX):]
+    return value
+
+
+def _strip_workspace_prefix(obj):
+    """Recursively strip /workspace/ prefix from path values in results."""
+    if isinstance(obj, dict):
+        return {
+            k: _strip_path_value(v) if _is_path_key(k) else _strip_workspace_prefix(v)
+            for k, v in obj.items()
+        }
+    elif isinstance(obj, list):
+        return [_strip_workspace_prefix(item) for item in obj]
+    return obj
+
 
 def _dict_to_tool(tool_dict: dict) -> types.Tool:
     """Convert a raw tool definition dict to an mcp types.Tool object."""
@@ -113,6 +145,7 @@ class MCPServer:
         async def call_tool(name: str, arguments: dict) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
             try:
                 result = await self.handle_tool_call(name, arguments or {})
+                result = _strip_workspace_prefix(result)
             except Exception as e:
                 error_logger(f"Tool call error ({name}): {e}\n{traceback.format_exc()}")
                 return [types.TextContent(type="text", text=json.dumps({"error": str(e)}))]
