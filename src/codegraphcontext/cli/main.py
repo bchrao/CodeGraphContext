@@ -108,20 +108,18 @@ def mcp_setup():
 def mcp_start():
     """
     Start the CodeGraphContext MCP server.
-    
+
     Starts the server which listens for JSON-RPC requests from stdin.
-    This is used by IDE integrations (VS Code, Cursor, etc.).
+    This is used by IDE integrations (VS Code, Cursor, etc.) and mcp-proxy.
     """
     console.print("[bold green]Starting CodeGraphContext Server...[/bold green]")
     _load_credentials()
 
     server = None
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
         # Initialize and run the main server.
-        server = MCPServer(loop=loop)
-        loop.run_until_complete(server.run())
+        server = MCPServer()
+        asyncio.run(server.run())
     except ValueError as e:
         # This typically happens if credentials are still not found after all checks.
         console.print(f"[bold red]Configuration Error:[/bold red] {e}")
@@ -130,10 +128,9 @@ def mcp_start():
         # Handle graceful shutdown on Ctrl+C.
         console.print("\n[bold yellow]Server stopped by user.[/bold yellow]")
     finally:
-        # Ensure server and event loop are properly closed.
+        # Ensure server resources are properly closed.
         if server:
             server.shutdown()
-        loop.close()
 
 @mcp_app.command("tools")
 def mcp_tools():
