@@ -30,8 +30,7 @@ class GraphBuilder:
         self.db_manager = db_manager
         self.job_manager = job_manager
         self.loop = loop
-        self.driver = self.db_manager.get_driver()
-        self._writer = GraphWriter(self.driver)
+        self._writer = GraphWriter(self.db_manager.get_driver())
         self.parsers = {
             ".py": "python",
             ".ipynb": "python",
@@ -66,6 +65,15 @@ class GraphBuilder:
         self._parsed_cache = {}
         self.create_schema()
 
+    @property
+    def driver(self):
+        """Default graph driver (backward compatible)."""
+        return self.db_manager.get_driver()
+
+    def _driver_for(self, graph_name: str = None):
+        """Get driver for a specific graph, or default."""
+        return self.db_manager.get_driver(graph_name)
+
     def get_parser(self, extension: str) -> Optional[TreeSitterParser]:
         """Gets or creates a TreeSitterParser for the given extension."""
         lang_name = self.parsers.get(extension)
@@ -80,8 +88,8 @@ class GraphBuilder:
                 return None
         return self._parsed_cache[lang_name]
 
-    def create_schema(self) -> None:
-        create_graph_schema(self.driver, self.db_manager)
+    def create_schema(self, graph_name: str = None) -> None:
+        create_graph_schema(self._driver_for(graph_name), self.db_manager)
 
     _MAX_STR_LEN = MAX_STR_LEN
 
@@ -144,8 +152,11 @@ class GraphBuilder:
     def delete_file_from_graph(self, path: str) -> None:
         self._writer.delete_file_from_graph(path)
 
-    def delete_repository_from_graph(self, repo_path: str) -> bool:
-        return self._writer.delete_repository_from_graph(repo_path)
+    def delete_repository_from_graph(self, repo_path: str, graph_name: str = None) -> bool:
+        if graph_name is None:
+            return self._writer.delete_repository_from_graph(repo_path)
+        # For non-default graphs, use a writer bound to that graph's driver
+        return GraphWriter(self._driver_for(graph_name)).delete_repository_from_graph(repo_path)
 
     def get_caller_file_paths(self, file_path_str: str) -> set:
         return self._writer.get_caller_file_paths(file_path_str)

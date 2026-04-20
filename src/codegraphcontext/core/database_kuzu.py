@@ -59,9 +59,13 @@ class KuzuDBManager:
         
         self._initialized = True
 
-    def get_driver(self):
+    def get_driver(self, graph_name: str = None):
         """
         Gets the KùzuDB connection. Retries on file-lock errors.
+
+        The `graph_name` parameter is accepted for interface parity with
+        FalkorDB (which supports multiple graphs per instance); KùzuDB is
+        a single-graph embedded DB, so the argument is ignored.
         """
         if self._conn is None:
             with self._lock:

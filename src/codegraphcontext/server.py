@@ -238,6 +238,9 @@ class MCPServer:
     def get_repository_stats_tool(self, **args) -> Dict[str, Any]:
         return management_handlers.get_repository_stats(self.code_finder, **args)
 
+    def list_graphs_tool(self, **args) -> Dict[str, Any]:
+        return management_handlers.list_graphs(self.db_manager, **args)
+
     def discover_codegraph_contexts_tool(self, **args) -> Dict[str, Any]:
         scan_path = Path(args.get("path", str(self.cwd))).resolve()
         max_depth = int(args.get("max_depth", 1))
@@ -353,6 +356,7 @@ class MCPServer:
             "load_bundle": self.load_bundle_tool,
             "search_registry_bundles": self.search_registry_bundles_tool,
             "get_repository_stats": self.get_repository_stats_tool,
+            "list_graphs": self.list_graphs_tool,
             "discover_codegraph_contexts": self.discover_codegraph_contexts_tool,
             "switch_context": self.switch_context_tool,
         }

@@ -45,7 +45,7 @@ class FalkorDBManager:
     _instance = None
     _process = None
     _driver = None
-    _graph = None
+    _graphs = {}
     _lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
@@ -110,16 +110,20 @@ class FalkorDBManager:
         # Register cleanup on exit
         atexit.register(self.shutdown)
 
-    def get_driver(self):
+    def get_driver(self, graph_name: str = None):
         """
         Gets the FalkorDB connection, starting the subprocess if necessary.
-        This method is thread-safe.
+        This method is thread-safe. Supports multiple graphs by name.
+
+        Args:
+            graph_name: Name of the graph to use. Defaults to FALKORDB_GRAPH_NAME env var.
 
         Returns:
             A FalkorDB graph instance that mimics Neo4j driver interface.
         """
         import platform
-        
+        graph_name = graph_name or self.graph_name
+
         if platform.system() == "Windows":
             raise RuntimeError(
                 "CodeGraphContext uses redislite/FalkorDB, which does not support Windows.\n"
@@ -148,14 +152,14 @@ class FalkorDBManager:
                         
                         info_logger(f"Connecting to FalkorDB Lite at {self.socket_path}")
                         self._driver = FalkorDB(unix_socket_path=self.socket_path)
-                        self._graph = self._driver.select_graph(self.graph_name)
-                        
+                        g = self._driver.select_graph(self.graph_name)
+
                         # Test the connection
                         try:
                             # Graph creation is lazy in some clients, force a query
-                            self._graph.query("RETURN 1")
+                            g.query("RETURN 1")
+                            self._graphs[self.graph_name] = g
                             info_logger(f"FalkorDB Lite connection established successfully")
-                            info_logger(f"Graph name: {self.graph_name}")
                         except Exception as e:
                             info_logger(f"Initial ping check: {e}")
                             
@@ -169,8 +173,14 @@ class FalkorDBManager:
                         error_logger(f"Failed to initialize FalkorDB: {e}")
                         raise
 
+        if graph_name not in self._graphs:
+            with self._lock:
+                if graph_name not in self._graphs:
+                    self._graphs[graph_name] = self._driver.select_graph(graph_name)
+                    info_logger(f"Selected graph: {graph_name}")
+
         # Return a wrapper that provides Neo4j-like session interface
-        return FalkorDBDriverWrapper(self._graph)
+        return FalkorDBDriverWrapper(self._graphs[graph_name])
 
     def _ensure_server_running(self):
         """Starts the FalkorDB worker subprocess if not reachable."""
@@ -258,12 +268,18 @@ class FalkorDBManager:
             
         raise RuntimeError("Timed out waiting for FalkorDB Lite to start.")
 
+    def list_graphs(self):
+        """Return names of all graphs in this FalkorDB instance."""
+        if self._driver is None:
+            self.get_driver()  # ensure connected
+        return self._driver.list_graphs()
+
     def close_driver(self):
         """Closes the connection."""
         if self._driver is not None:
             info_logger("Closing FalkorDB Lite connection")
             self._driver = None
-            self._graph = None
+            self._graphs = {}
 
     def shutdown(self):
         """Kills the subprocess on exit."""
@@ -278,10 +294,13 @@ class FalkorDBManager:
     
     def is_connected(self) -> bool:
         """Checks if the database connection is currently active."""
-        if self._graph is None:
+        if self._driver is None:
             return False
         try:
-            self._graph.query("RETURN 1")
+            g = self._graphs.get(self.graph_name)
+            if g is None:
+                g = self._driver.select_graph(self.graph_name)
+            g.query("RETURN 1")
             return True
         except Exception:
             return False

@@ -1,4 +1,10 @@
 
+# Common optional property for multi-graph support
+_GRAPH_NAME_PROP = {
+    "type": "string",
+    "description": "Optional: Name of the FalkorDB graph to query. Each indexed repository can have its own graph. Use 'list_graphs' to see available graphs. Defaults to the server's configured graph name."
+}
+
 TOOLS = {
     "add_code_to_graph": {
         "name": "add_code_to_graph",
@@ -7,7 +13,8 @@ TOOLS = {
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "Path to the directory or file to add."},
-                "is_dependency": {"type": "boolean", "description": "Whether this code is a dependency.", "default": False}
+                "is_dependency": {"type": "boolean", "description": "Whether this code is a dependency.", "default": False},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["path"]
         }
@@ -31,7 +38,7 @@ TOOLS = {
         "description": "Find relevant code snippets related to a keyword (e.g., function name, class name, or content).",
         "inputSchema": {
             "type": "object",
-            "properties": { "query": {"type": "string", "description": "Keyword or phrase to search for"}, "fuzzy_search": {"type": "boolean", "description": "Whether to use fuzzy search", "default": False}, "edit_distance": {"type": "number", "description": "Edit distance for fuzzy search (between 0-2)", "default": 2}, "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}}, 
+            "properties": { "query": {"type": "string", "description": "Keyword or phrase to search for"}, "fuzzy_search": {"type": "boolean", "description": "Whether to use fuzzy search", "default": False}, "edit_distance": {"type": "number", "description": "Edit distance for fuzzy search (between 0-2)", "default": 2}, "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}, "graph_name": _GRAPH_NAME_PROP},
             "required": ["query"]
         }
     },
@@ -44,7 +51,8 @@ TOOLS = {
                 "query_type": {"type": "string", "description": "Type of relationship query to run.", "enum": ["find_callers", "find_callees", "find_all_callers", "find_all_callees", "find_importers", "who_modifies", "class_hierarchy", "overrides", "dead_code", "call_chain", "module_deps", "variable_scope", "find_complexity", "find_functions_by_argument", "find_functions_by_decorator"]},
                 "target": {"type": "string", "description": "The function, class, or module to analyze."},
                 "context": {"type": "string", "description": "Optional: specific file path for precise results."},
-                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}
+                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["query_type", "target"]
         }
@@ -63,7 +71,10 @@ TOOLS = {
         "description": "Fallback tool to run a direct, read-only Cypher query against the code graph. Use this for complex questions not covered by other tools. The graph contains nodes representing code structures and relationships between them. **Schema Overview:**\n- **Nodes:** `Repository`, `File`, `Module`, `Class`, `Function`.\n- **Properties:** Nodes have properties like `name`, `path`, `cyclomatic_complexity` (on Function nodes), and `source`.\n- **Relationships:** `CONTAINS` (e.g., File-[:CONTAINS]->Function), `CALLS` (Function-[:CALLS]->Function or File-[:CALLS]->Function), `IMPORTS` (File-[:IMPORTS]->Module), `INHERITS` (Class-[:INHERITS]->Class).",
         "inputSchema": {
             "type": "object",
-            "properties": { "cypher_query": {"type": "string", "description": "The read-only Cypher query to execute."} },
+            "properties": {
+                "cypher_query": {"type": "string", "description": "The read-only Cypher query to execute."},
+                "graph_name": _GRAPH_NAME_PROP
+            },
             "required": ["cypher_query"]
         }
     },
@@ -75,7 +86,8 @@ TOOLS = {
             "properties": {
                 "package_name": {"type": "string", "description": "Name of the package to add (e.g., 'requests', 'express', 'moment', 'lodash')."},
                 "language": {"type": "string", "description": "The programming language of the package.", "enum": ["python", "javascript", "typescript", "java", "c", "go", "ruby", "php","cpp"]},
-                "is_dependency": {"type": "boolean", "description": "Mark as a dependency.", "default": True}
+                "is_dependency": {"type": "boolean", "description": "Mark as a dependency.", "default": True},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["package_name", "language"]
         }
@@ -87,7 +99,8 @@ TOOLS = {
             "type": "object",
             "properties": {
                 "exclude_decorated_with": {"type": "array", "items": {"type": "string"}, "description": "Optional: A list of decorator names (e.g., '@app.route') to exclude from dead code detection.", "default": []},
-                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}
+                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."},
+                "graph_name": _GRAPH_NAME_PROP
             }
         }
     },
@@ -99,7 +112,8 @@ TOOLS = {
             "properties": {
                 "function_name": {"type": "string", "description": "The name of the function to analyze."},
                 "path": {"type": "string", "description": "Optional: The full path to the file containing the function for a more specific query."},
-                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}
+                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["function_name"]
         }
@@ -111,7 +125,8 @@ TOOLS = {
             "type": "object",
             "properties": {
                 "limit": {"type": "integer", "description": "The maximum number of complex functions to return.", "default": 10},
-                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."}
+                "repo_path": {"type": "string", "description": "Optional: Path to the repository to restrict the search to."},
+                "graph_name": _GRAPH_NAME_PROP
             }
         }
     },
@@ -120,7 +135,9 @@ TOOLS = {
         "description": "List all indexed repositories.",
         "inputSchema": {
             "type": "object",
-            "properties": {}
+            "properties": {
+                "graph_name": _GRAPH_NAME_PROP
+            }
         }
     },
     "delete_repository": {
@@ -129,7 +146,8 @@ TOOLS = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "repo_path": {"type": "string", "description": "The path of the repository to delete."} 
+                "repo_path": {"type": "string", "description": "The path of the repository to delete."},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["repo_path"]
         }
@@ -140,7 +158,8 @@ TOOLS = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "cypher_query": {"type": "string", "description": "The Cypher query to visualize."}
+                "cypher_query": {"type": "string", "description": "The Cypher query to visualize."},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["cypher_query"]
         }
@@ -168,7 +187,8 @@ TOOLS = {
             "type": "object",
             "properties": {
                 "bundle_name": {"type": "string", "description": "Name of the bundle to load (e.g., 'flask', 'pandas', 'flask-main-2579ce9.cgc'). Can be a full filename or just the package name."},
-                "clear_existing": {"type": "boolean", "description": "Whether to clear existing data before loading. Use with caution.", "default": False}
+                "clear_existing": {"type": "boolean", "description": "Whether to clear existing data before loading. Use with caution.", "default": False},
+                "graph_name": _GRAPH_NAME_PROP
             },
             "required": ["bundle_name"]
         }
@@ -190,7 +210,8 @@ TOOLS = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "repo_path": {"type": "string", "description": "Optional: Path to a specific repository. If not provided, returns overall database statistics."}
+                "repo_path": {"type": "string", "description": "Optional: Path to a specific repository. If not provided, returns overall database statistics."},
+                "graph_name": _GRAPH_NAME_PROP
             }
         }
     },
@@ -215,6 +236,14 @@ TOOLS = {
                 "save": {"type": "boolean", "description": "Whether to persist this mapping so the server reconnects automatically next time. Defaults to true.", "default": True}
             },
             "required": ["context_path"]
+        }
+    },
+    "list_graphs": {
+        "name": "list_graphs",
+        "description": "List all available graphs in the FalkorDB instance. Each graph typically corresponds to an indexed repository. Use the graph names with the 'graph_name' parameter in other tools.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
         }
     }
 }

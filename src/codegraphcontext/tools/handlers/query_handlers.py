@@ -12,6 +12,7 @@ def execute_cypher_query(db_manager, **args) -> Dict[str, Any]:
     by disallowing keywords like CREATE, MERGE, DELETE, etc.
     """
     cypher_query = args.get("cypher_query")
+    graph_name = args.get("graph_name")
     if not cypher_query:
         return {"error": "Cypher query cannot be empty."}
 
@@ -34,7 +35,7 @@ def execute_cypher_query(db_manager, **args) -> Dict[str, Any]:
 
     try:
         debug_log(f"Executing Cypher query: {cypher_query}")
-        with db_manager.get_driver().session() as session:
+        with db_manager.get_driver(graph_name).session() as session:
             result = session.run(cypher_query)
             # Convert results to a list of dictionaries for clean JSON serialization.
             records = [record.data() for record in result]
