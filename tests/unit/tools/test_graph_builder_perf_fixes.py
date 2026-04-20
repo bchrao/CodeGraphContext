@@ -65,6 +65,17 @@ class _FakeDriver:
         return self._session
 
 
+class _FakeDBManager:
+    def __init__(self, driver):
+        self._driver = driver
+
+    def get_driver(self, graph_name: str = None):
+        return self._driver
+
+    def get_backend_type(self):
+        return 'neo4j'
+
+
 def _make_graph_builder(session: Optional[_RecordingSession] = None):
     """Return a GraphBuilder with a fake driver. Skips full __init__ setup."""
     from codegraphcontext.tools.graph_builder import GraphBuilder
@@ -73,8 +84,9 @@ def _make_graph_builder(session: Optional[_RecordingSession] = None):
     gb = GraphBuilder.__new__(GraphBuilder)
     if session is None:
         session = _RecordingSession()
-    gb.driver = _FakeDriver(session)
-    gb._writer = GraphWriter(gb.driver)
+    fake_driver = _FakeDriver(session)
+    gb.db_manager = _FakeDBManager(fake_driver)
+    gb._writer = GraphWriter(fake_driver)
     gb.parsers = {}
     return gb, session
 

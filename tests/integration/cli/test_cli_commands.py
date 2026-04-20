@@ -109,7 +109,7 @@ class _FakeDriver:
 
 
 class _FakeDBManager:
-    def get_driver(self):
+    def get_driver(self, graph_name: str = None):
         return _FakeDriver()
 
     def close_driver(self):
